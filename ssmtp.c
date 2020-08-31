@@ -26,11 +26,7 @@
 #include <ctype.h>
 #include <netdb.h>
 #ifdef HAVE_SSL
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <gnutls/openssl.h>
 #endif
 #ifdef MD5AUTH
 #include "md5auth/hmac_md5.h"
@@ -96,6 +92,20 @@ static char hextab[]="0123456789abcdef";
 #endif
 
 ssize_t outbytes;
+
+#if defined (__SVR4) && defined (__sun)
+/*
+strndup() - Unimplemented by the Solaris libc.
+*/
+char * strndup(char const *s, size_t n)
+{
+	size_t len = strnlen(s, n);
+	char *new = malloc(len + 1);
+	if(new == NULL) return NULL;
+	new[len] = '\0';
+	return memcpy(new, s, len);
+}
+#endif
 
 /*
 log_event() -- Write event to syslog (or log file if defined)
@@ -365,6 +375,12 @@ bool_t standardise(char *str, bool_t *linestart)
 	if((p = strchr(str, '\n'))) {
 		*p = (char)NULL;
 		*linestart = True;
+
+		/* If the line ended in "\r\n", then drop the '\r' too */
+		sl = strlen(str);
+		if(sl >= 1 && str[sl - 1] == '\r') {
+			str[sl - 1] = (char)NULL;
+		}
 	}
 	return(leadingdot);
 }
@@ -685,9 +701,6 @@ void header_save(char *str)
 		if(override_from == True) {
 			uad = from_strip(ht->string);
 		}
-		else {
-			return;
-		}
 #endif
 		have_from = True;
 	}
@@ -758,6 +771,14 @@ void header_parse(FILE *stream)
 		}
 		len++;
 
+		if(l == '\r' && c == '\n') {
+			/* Properly handle input that already has "\r\n"
+			   line endings; see https://bugs.debian.org/584162 */
+			l = (len >= 2 ? *(q - 2) : '\n');
+			q--;
+			len--;
+		}
+
 		if(l == '\n') {
 			switch(c) {
 				case ' ':
@@ -780,7 +801,9 @@ void header_parse(FILE *stream)
 						if((q = strrchr(p, '\n'))) {
 							*q = (char)NULL;
 						}
-						header_save(p);
+						if(len > 0) {
+							header_save(p);
+						}
 
 						q = p;
 						len = 0;
@@ -790,35 +813,12 @@ void header_parse(FILE *stream)
 
 		l = c;
 	}
-	if(in_header) {
-		if(l == '\n') {
-			switch(c) {
-				case ' ':
-				case '\t':
-						/* Must insert '\r' before '\n's embedded in header
-						   fields otherwise qmail won't accept our mail
-						   because a bare '\n' violates some RFC */
-						
-						*(q - 1) = '\r';	/* Replace previous \n with \r */
-						*q++ = '\n';		/* Insert \n */
-						len++;
-						
-						break;
-
-				case '\n':
-						in_header = False;
-
-				default:
-						*q = (char)NULL;
-						if((q = strrchr(p, '\n'))) {
-							*q = (char)NULL;
-						}
-						header_save(p);
-
-						q = p;
-						len = 0;
-			}
+	if(in_header && l == '\n') {
+		/* Got EOF while reading the header */
+		if((q = strrchr(p, '\n'))) {
+			*q = (char)NULL;
 		}
+		header_save(p);
 	}
 	(void)free(p);
 }
@@ -1133,7 +1133,7 @@ int smtp_open(char *host, int port)
 	}
 
 	if(use_cert == True) { 
-		if(SSL_CTX_use_certificate_chain_file(ctx, tls_cert) <= 0) {
+		if(SSL_CTX_use_certificate_file(ctx, tls_cert, SSL_FILETYPE_PEM) <= 0) {
 			perror("Use certfile");
 			return(-1);
 		}
@@ -1143,10 +1143,12 @@ int smtp_open(char *host, int port)
 			return(-1);
 		}
 
+#ifdef NOT_USED
 		if(!SSL_CTX_check_private_key(ctx)) {
 			log_event(LOG_ERR, "Private key does not match the certificate public key\n");
 			return(-1);
 		}
+#endif
 	}
 #endif
 
@@ -1286,8 +1288,12 @@ fd_getc() -- Read a character from an fd
 ssize_t fd_getc(int fd, void *c)
 {
 #ifdef HAVE_SSL
-	if(use_tls == True) { 
-		return(SSL_read(ssl, c, 1));
+	if(use_tls == True) {
+		int attempt = 3;
+		int ret = 0;
+		while (attempt-- > 0 && ret == 0)
+			ret = SSL_read(ssl, c, 1);
+		return ret;
 	}
 #endif
 	return(read(fd, c, 1));
@@ -1409,6 +1415,7 @@ ssmtp() -- send the message (exactly one) from stdin to the mailhub SMTP port
 int ssmtp(char *argv[])
 {
 	char b[(BUF_SZ + 2)], *buf = b+1, *p, *q;
+	char *remote_addr;
 #ifdef MD5AUTH
 	char challenge[(BUF_SZ + 1)];
 #endif
@@ -1612,6 +1619,10 @@ int ssmtp(char *argv[])
 		outbytes += smtp_write(sock, "From: %s", from);
 	}
 
+	if(remote_addr=getenv("REMOTE_ADDR")) {
+		outbytes += smtp_write(sock, "X-Originating-IP: %s", remote_addr);
+	}
+
 	if(have_date == False) {
 		outbytes += smtp_write(sock, "Date: %s", arpadate);
 	}
@@ -1657,12 +1668,12 @@ int ssmtp(char *argv[])
 			outbytes += smtp_write(sock, "%s", leadingdot ? b : buf);
 		} else {
 			if (log_level > 0) {
-				log_event(LOG_INFO, "Sent a very long line in chunks");
+				log_event(LOG_INFO, "Sending a partial line");
 			}
 			if (leadingdot) {
-				outbytes += fd_puts(sock, b, sizeof(b));
+				outbytes += fd_puts(sock, b, strlen(b));
 			} else {
-				outbytes += fd_puts(sock, buf, bufsize);
+				outbytes += fd_puts(sock, buf, strlen(buf));
 			}
 		}
 		(void)alarm((unsigned) MEDWAIT);
