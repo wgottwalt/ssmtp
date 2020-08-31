@@ -63,7 +63,10 @@ char *minus_F = (char)NULL;
 char *gecos;
 char *prog = (char)NULL;
 char *root = NULL;
-char *tls_cert = "/etc/ssl/certs/ssmtp.pem";	/* Default Certificate */
+char *tls_cert = "/etc/pki/tls/private/ssmtp.pem";	/* Default Certificate */
+char *tls_key = "/etc/pki/tls/private/ssmtp.pem";    /* Default private key */
+char *tls_ca_file = NULL;      /* Trusted Certificate file */
+char *tls_ca_dir = NULL;       /* Trusted Certificate directory */
 char *uad = (char)NULL;
 char *config_file = (char)NULL;		/* alternate configuration file */
 
@@ -439,6 +442,50 @@ void revaliases(struct passwd *pw)
 }
 
 /* 
+ * Eugene:
+ *
+ * simple aliases support:
+ * lookup aliases file and remap rcpt
+ */
+char *aliases_lookup(char *str)
+{
+	char buf[(BUF_SZ + 1)], *p;
+	char name[(BUF_SZ + 1)];
+	FILE *fp;
+	char *saveptr = NULL;
+
+	if((fp = fopen(ALIASES_FILE, "r"))) {
+		strncpy(name, str, BUF_SZ);
+		while(fgets(buf, sizeof(buf), fp)) {
+			/* Make comments invisible */
+			if((p = strchr(buf, '#'))) {
+				*p = (char)NULL;
+			}
+
+			/* Ignore malformed lines and comments */
+			if(strchr(buf, ':') == (char *)NULL) {
+				continue;
+			}
+
+			/* Parse the alias */
+			if( (p = strtok_r(buf, ": \t\r\n", &saveptr) ) && !strncmp(p, name, BUF_SZ) &&
+				(p = strtok_r(NULL, ": \t\r\n", &saveptr) )) {
+				if(log_level > 0) log_event(LOG_INFO, "Remapping: \"%s\" --> \"%s\"\n", name, p);
+				strncpy(name, p, BUF_SZ);
+			}
+		}
+
+		fclose(fp);
+		if( strcmp( str, name ) == 0 ) {
+			return strdup(name);
+		} else {
+			return aliases_lookup(name);
+		}
+
+	} else  return str; /* can't read aliases? it's not a problem */
+}
+
+/*
 from_strip() -- Transforms "Name <login@host>" into "login@host" or "login@host (Real name)"
 */
 char *from_strip(char *str)
@@ -664,9 +711,14 @@ rcpt_remap() -- Alias systems-level users to the person who
 char *rcpt_remap(char *str)
 {
 	struct passwd *pw;
-	if((root==NULL) || strlen(root)==0 || strchr(str, '@') ||
-		((pw = getpwnam(str)) == NULL) || (pw->pw_uid > MAXSYSUID)) {
-		return(append_domain(str));	/* It's not a local systems-level user */
+	char *rcpt;
+
+	/* before all other mappings */
+	rcpt = aliases_lookup(str);
+
+	if((root==NULL) || strlen(root)==0 || strchr(rcpt, '@') ||
+		((pw = getpwnam(rcpt)) == NULL) || (pw->pw_uid > MAXSYSUID)) {
+		return(append_domain(rcpt));   /* It's not a local systems-level user */
 	}
 	else {
 		return(append_domain(root));
@@ -1033,6 +1085,33 @@ bool_t read_config()
 					log_event(LOG_INFO, "Set TLSCert=\"%s\"\n", tls_cert);
 				}
 			}
+                       else if(strcasecmp(p, "TLSKey") == 0) {
+                               if((tls_key = strdup(q)) == (char *)NULL) {
+                                       die("parse_config() -- strdup() failed");
+                               }
+
+                               if(log_level > 0) {
+                                       log_event(LOG_INFO, "Set TLSKey=\"%s\"\n", tls_key);
+                               }
+                       }
+                       else if(strcasecmp(p, "TLS_CA_File") == 0) {
+                               if((tls_ca_file = strdup(q)) == (char *)NULL) {
+                                       die("parse_config() -- strdup() failed");
+                               }
+
+                               if(log_level > 0) {
+                                       log_event(LOG_INFO, "Set TLS_CA_File=\"%s\"\n", tls_ca_file);
+                               }
+                       }
+                       else if(strcasecmp(p, "TLS_CA_Dir") == 0) {
+                               if((tls_ca_dir = strdup(q)) == (char *)NULL) {
+                                       die("parse_config() -- strdup() failed");
+                               }
+
+                               if(log_level > 0) {
+                                       log_event(LOG_INFO, "Set TLS_CA_Dir=\"%s\"\n", tls_ca_dir);
+                               }
+                       }
 #endif
 			/* Command-line overrides these */
 			else if(strcasecmp(p, "AuthUser") == 0 && !auth_user) {
@@ -1045,7 +1124,8 @@ bool_t read_config()
 				}
 			}
 			else if(strcasecmp(p, "AuthPass") == 0 && !auth_pass) {
-				if((auth_pass = strdup(q)) == (char *)NULL) {
+				auth_pass = firsttok(&rightside, " \n\t");
+				if(auth_pass  == (char *)NULL) {
 					die("parse_config() -- strdup() failed");
 				}
 
@@ -1116,6 +1196,8 @@ int smtp_open(char *host, int port)
 
 #ifdef HAVE_SSL
 	int err;
+	long lerr;
+	unsigned long ulerr;
 	char buf[(BUF_SZ + 1)];
 
 	/* Init SSL stuff */
@@ -1138,7 +1220,7 @@ int smtp_open(char *host, int port)
 			return(-1);
 		}
 
-		if(SSL_CTX_use_PrivateKey_file(ctx, tls_cert, SSL_FILETYPE_PEM) <= 0) {
+		if(SSL_CTX_use_PrivateKey_file(ctx, tls_key, SSL_FILETYPE_PEM) <= 0) {
 			perror("Use PrivateKey");
 			return(-1);
 		}
@@ -1150,6 +1232,16 @@ int smtp_open(char *host, int port)
 		}
 #endif
 	}
+	if (tls_ca_file || tls_ca_dir) {
+		if(!SSL_CTX_load_verify_locations(ctx, tls_ca_file, tls_ca_dir)) {
+			ulerr = ERR_get_error();
+			log_event(LOG_ERR, "Error setting verify location: %s",
+				  ERR_reason_error_string(ulerr));
+			return(-1);
+		}
+	}
+
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 #endif
 
 #ifdef INET6
@@ -1253,14 +1345,20 @@ int smtp_open(char *host, int port)
 
 		ssl = SSL_new(ctx);
 		if(!ssl) {
-			log_event(LOG_ERR, "SSL not working");
+			ulerr = ERR_get_error();
+			log_event(LOG_ERR, "SSL not working: %s",
+                                 ERR_reason_error_string(ulerr));
 			return(-1);
 		}
 		SSL_set_fd(ssl, s);
 
 		err = SSL_connect(ssl);
 		if(err < 0) { 
-			perror("SSL_connect");
+			ulerr = ERR_get_error();
+			lerr = SSL_get_verify_result(ssl);
+			log_event(LOG_ERR, "SSL not working: %s (%ld)",
+				ERR_reason_error_string(ulerr), lerr);
+
 			return(-1);
 		}
 
@@ -1274,8 +1372,6 @@ int smtp_open(char *host, int port)
 			return(-1);
 		}
 		X509_free(server_cert);
-
-		/* TODO: Check server cert if changed! */
 	}
 #endif
 
@@ -1736,7 +1832,7 @@ char **parse_options(int argc, char *argv[])
 	}
 	else if(strcmp(prog, "newaliases") == 0) {
 		/* Someone wanted to rebuild aliases */
-		paq("newaliases: Aliases are not used in sSMTP\n");
+		paq("newaliases: In sSMTP aliases are read from a plain text file\n");
 	}
 
 	i = 1;

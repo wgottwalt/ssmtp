@@ -22,7 +22,8 @@ placed in dead.letter in the sender's home directory.
 .PP
 Config files allow one to specify the address to receive mail from
 root, daemon, etc.; a default mailhub; a default domain to be used in
-From: lines; and per-user From: addresses and mailhub names.
+From: lines; per-user From: addresses and mailhub names; and aliases in the
+traditional format used by sendmail for the /etc/aliases file.
 .sp
 .PP
 It does not attempt to provide all the functionality of sendmail: it is
@@ -32,9 +33,8 @@ spool option for non-Sun machines, for machines whose sendmails are too
 difficult (or various) to configure, for machines with known disfeatures in
 their sendmails or for ones where there are ``mysterious problems''. 
 .PP
-It does not do aliasing, which must be done either in the user agent
-or on the mailhub. Nor does it honor .forwards, which have to be done
-on the recieving host.  It especially does not deliver to pipelines.
+It does not honor .forwards, which have to be done on the recieving host.  It
+especially does not deliver to pipelines.
 
 .SH OPTIONS
 Most sendmail options are irrelevent to sSMTP. Those marked ``ignored'' or
@@ -271,6 +271,8 @@ through mail.isp.com.
  /etc/ssmtp/ssmtp.conf - configuration file
 .br
  /etc/ssmtp/revaliases - reverse aliases file
+.br
+ /etc/aliases - aliases file
 
 .SH SEE ALSO
 RFC821, RFC822, ssmtp.conf(5).

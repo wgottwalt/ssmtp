@@ -3,12 +3,12 @@ Purpose and value:
  send their mail via the departmental mailhub from which they pick up their
  mail (via pop, imap, rsmtp, pop_fetch, NFS... or the like).  This program
  accepts mail and sends it to the mailhub, optionally replacing the domain in
- the From: line with a different one.
+ the From: line with a different one and expanding aliases.
 
- WARNING: the above is all it does. It does not receive mail, expand aliases
- or manage a queue.  That belongs on a mailhub with a system administrator.
- The man page (ssmtp.8) and the program logic manual (ssmtp_plm) discuss the
- limitations in more detail.
+ WARNING: the above is all it does. It does not receive mail, or manage a
+ queue.  That belongs on a mailhub with a system administrator.  The man page
+ (ssmtp.8) and the program logic manual (ssmtp_plm) discuss the limitations in
+ more detail. Expanding aliases is only available after release 2.61-11.8.
 
  It uses a minimum of external configuration information, and so can be
  installed by copying the (right!) binary and an optional four-line config
