@@ -1610,6 +1610,25 @@ int ssmtp(char *argv[])
 		}
 		else {
 #endif
+	if (auth_method && strcasecmp(auth_method, "plain") == 0) {
+		outbytes += smtp_write(sock, "AUTH PLAIN");
+		(void)alarm((unsigned) MEDWAIT);
+
+		if (smtp_read(sock, buf) != 3) {
+			die("Server rejected AUTH PLAIN (%s)", buf);
+		}
+		/* we assume server asked us for Username */
+		memset(buf, 0, bufsize);
+		/* the format is "authorization-id\0authentication-id\0passwd\0"
+		   we assume authorization-id = authentication-id */
+		void *plainval = malloc(2 * strlen(auth_user) + strlen(auth_pass) + 2);
+		memcpy(plainval, auth_user, strlen(auth_user) + 1);
+		memcpy(plainval + strlen(auth_user) + 1, auth_user, strlen(auth_user) + 1);
+		memcpy(plainval + 2 * (strlen(auth_user) + 1), auth_pass, strlen(auth_pass));
+		to64frombits(buf, plainval, 2 * strlen(auth_user) + strlen(auth_pass) + 2);
+		free(plainval);
+	}
+	else {
 		memset(buf, 0, bufsize);
 		to64frombits(buf, auth_user, strlen(auth_user));
 		if (use_oldauth) {
@@ -1634,6 +1653,7 @@ int ssmtp(char *argv[])
 		memset(buf, 0, bufsize);
 
 		to64frombits(buf, auth_pass, strlen(auth_pass));
+		}
 #ifdef MD5AUTH
 		}
 #endif
