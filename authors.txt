@@ -1,0 +1,16 @@
+Authors:
+ Wilken 'Akiko' Gottwalt, akiko@linux-addicted.net
+ Anibal Monsalve Salazar, anibal@debian.org
+ David Collier-Brown, davecb@hobbes.ss.org, davecb@sni.ca or dave@lethe.uucp
+ Christoph Lameter, clameter@debian.org, clameter@waterf.org, clameter@i-m-f.org
+ Hugo Haas, hugo@debian.org, hugo@larve.net, hugo@via.ecp.fr
+ Matt Ryan, mryan@debian.org, matt.ryan@banana.org.uk
+ Simon Elsbrock, simon@iodev.org
+
+TLS support from Tobias Rundstrom <tobi@tobi.nu>
+IPv6 support from Jun-ya Kato <kato@goto.info.waseda.ac.jp>
+MD5 authentication support from TAKIZAWA Takashi <aki@luna.email.ne.jp>
+
+Current Maintainer:
+ Wilken 'Akiko' Gottwalt @ Github, https://github.com/wgottwalt, akiko@linux-addicted.net
+ Anibal Monsalve Salazar @ Debian, A.Monsalve.Salazar@IEEE.org
