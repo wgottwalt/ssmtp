@@ -1518,7 +1518,6 @@ int ssmtp(char *argv[])
 	int i, sock;
 	uid_t uid;
 	bool_t minus_v_save, leadingdot, linestart = True;
-	int timeout = 0;
 	int bufsize = sizeof(b)-1;
 
 	b[0] = '.';
@@ -1764,6 +1763,7 @@ int ssmtp(char *argv[])
 	fcntl(STDIN_FILENO,F_SETFL,O_NONBLOCK);
 
 	while(!feof(stdin)) {
+		int timeout = 0;
 		if (!fgets(buf, bufsize, stdin)) {
 			/* if nothing was received, then no transmission
 			 * over smtp should be done */
