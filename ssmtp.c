@@ -1735,7 +1735,7 @@ int ssmtp(char *argv[])
 		outbytes += smtp_write(sock, "From: %s", from);
 	}
 
-	if(remote_addr=getenv("REMOTE_ADDR")) {
+	if((remote_addr = secure_getenv("REMOTE_ADDR"))) {
 		outbytes += smtp_write(sock, "X-Originating-IP: %s", remote_addr);
 	}
 

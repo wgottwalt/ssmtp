@@ -31,30 +31,33 @@ static const char base64val[] = {
 };
 #define DECODE64(c)  (isascii(c) ? base64val[c] : BAD)
 
-void to64frombits(unsigned char *out, const unsigned char *in, int inlen)
+void to64frombits(char *out, const char *in, int inlen)
 /* raw bytes in quasi-big-endian order to base 64 string (NUL-terminated) */
 {
+    const unsigned char *in_p = (const unsigned char *)in;
+    unsigned char *out_p = (unsigned char *)out;
+
     for (; inlen >= 3; inlen -= 3)
     {
-	*out++ = base64digits[in[0] >> 2];
-	*out++ = base64digits[((in[0] << 4) & 0x30) | (in[1] >> 4)];
-	*out++ = base64digits[((in[1] << 2) & 0x3c) | (in[2] >> 6)];
-	*out++ = base64digits[in[2] & 0x3f];
-	in += 3;
+	*out_p++ = base64digits[in_p[0] >> 2];
+	*out_p++ = base64digits[((in_p[0] << 4) & 0x30) | (in_p[1] >> 4)];
+	*out_p++ = base64digits[((in_p[1] << 2) & 0x3c) | (in_p[2] >> 6)];
+	*out_p++ = base64digits[in_p[2] & 0x3f];
+	in_p += 3;
     }
     if (inlen > 0)
     {
 	unsigned char fragment;
-    
-	*out++ = base64digits[in[0] >> 2];
-	fragment = (in[0] << 4) & 0x30;
+
+	*out_p++ = base64digits[in_p[0] >> 2];
+	fragment = (in_p[0] << 4) & 0x30;
 	if (inlen > 1)
-	    fragment |= in[1] >> 4;
-	*out++ = base64digits[fragment];
-	*out++ = (inlen < 2) ? '=' : base64digits[(in[1] << 2) & 0x3c];
-	*out++ = '=';
+	    fragment |= in_p[1] >> 4;
+	*out_p++ = base64digits[fragment];
+	*out_p++ = (inlen < 2) ? '=' : base64digits[(in_p[1] << 2) & 0x3c];
+	*out_p++ = '=';
     }
-    *out = '\0';
+    *out_p = '\0';
 }
 
 int from64tobits(char *out, const char *in)
@@ -77,7 +80,7 @@ int from64tobits(char *out, const char *in)
 	    return(-1);
 	digit3 = in[2];
 	if (digit3 != '=' && DECODE64(digit3) == BAD)
-	    return(-1); 
+	    return(-1);
 	digit4 = in[3];
 	if (digit4 != '=' && DECODE64(digit4) == BAD)
 	    return(-1);
@@ -94,7 +97,7 @@ int from64tobits(char *out, const char *in)
 		++len;
 	    }
 	}
-    } while 
+    } while
 	(*in && *in != '\r' && digit4 != '=');
 
     return (len);
