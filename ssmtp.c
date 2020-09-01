@@ -837,30 +837,28 @@ void header_parse(FILE *stream)
 			switch(c) {
 				case ' ':
 				case '\t':
-						/* Must insert '\r' before '\n's embedded in header
-						   fields otherwise qmail won't accept our mail
-						   because a bare '\n' violates some RFC */
-						
-						*(q - 1) = '\r';	/* Replace previous \n with \r */
-						*q++ = '\n';		/* Insert \n */
-						len++;
-						
-						break;
+					/* Must insert '\r' before '\n's embedded in header
+					   fields otherwise qmail won't accept our mail
+					   because a bare '\n' violates some RFC */
+					*(q - 1) = '\r';	/* Replace previous \n with \r */
+					*q++ = '\n';		/* Insert \n */
+					len++;
+					break;
 
 				case '\n':
-						in_header = False;
+					in_header = False;
+					__attribute__((fallthrough));
 
 				default:
+					*q = 0;
+					if((q = strrchr(p, '\n'))) {
 						*q = 0;
-						if((q = strrchr(p, '\n'))) {
-							*q = 0;
-						}
-						if(len > 0) {
-							header_save(p);
-						}
-
-						q = p;
-						len = 0;
+					}
+					if(len > 0) {
+						header_save(p);
+					}
+					q = p;
+					len = 0;
 			}
 		}
 		*q++ = c;
