@@ -1931,26 +1931,51 @@ char **parse_options(int argc, char *argv[])
 			case 'b':
 				switch(argv[i][++j]) {
 
-				case 'a':	/* ARPANET mode */
-						paq("-ba is not supported by sSMTP\n");
-				case 'd':	/* Run as a daemon */
-						paq("-bd is not supported by sSMTP\n");
-				case 'i':	/* Initialise aliases */
-						paq("%s: Aliases are not used in sSMTP\n", prog);
-				case 'm':	/* Default addr processing */
-						continue;
+				case 'a':
+					/* ARPANET mode */
+					paq("-ba is not supported by sSMTP\n");
+					break;
 
-				case 'p':	/* Print mailqueue */
-						paq("%s: Mail queue is empty\n", prog);
-				case 's':	/* Read SMTP from stdin */
-						paq("-bs is not supported by sSMTP\n");
-				case 't':	/* Test mode */
-						paq("-bt is meaningless to sSMTP\n");
-				case 'v':	/* Verify names only */
-						paq("-bv is meaningless to sSMTP\n");
-				case 'z':	/* Create freeze file */
-						paq("-bz is meaningless to sSMTP\n");
+				case 'd':
+					/* Run as a daemon */
+					paq("-bd is not supported by sSMTP\n");
+					break;
+
+				case 'i':
+					/* Initialise aliases */
+					paq("%s: Aliases are not used in sSMTP\n", prog);
+					break;
+
+				case 'm':
+					/* Default addr processing */
+					continue;
+
+				case 'p':
+					/* Print mailqueue */
+					paq("%s: Mail queue is empty\n", prog);
+					break;
+
+				case 's':
+					/* Read SMTP from stdin */
+					paq("-bs is not supported by sSMTP\n");
+					break;
+
+				case 't':
+					/* Test mode */
+					paq("-bt is meaningless to sSMTP\n");
+					break;
+
+				case 'v':
+					/* Verify names only */
+					paq("-bv is meaningless to sSMTP\n");
+					break;
+
+				case 'z':
+					/* Create freeze file */
+					paq("-bz is meaningless to sSMTP\n");
+					break;
 				}
+				break;
 
 			/* Configfile name */
 			case 'C':
@@ -2105,6 +2130,7 @@ char **parse_options(int argc, char *argv[])
 				/* Old headers, spaces between adresses */
 				case 'o':
 					paq("-oo is not supported by sSMTP\n");
+					break;
 
 				/* Queue dir */
 				case 'Q':
@@ -2143,7 +2169,8 @@ char **parse_options(int argc, char *argv[])
 
 			/* Process the queue [at time] */
 			case 'q':
-					paq("%s: Mail queue is empty\n", prog);
+				paq("%s: Mail queue is empty\n", prog);
+				break;
 
 			/* Read message's To/Cc/Bcc lines */
 			case 't':
