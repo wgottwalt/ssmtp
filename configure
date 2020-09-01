@@ -743,13 +743,13 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS="$ac_save_CFLAGS"
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -O2 -Wall"
+    CFLAGS="-g -Os -W -Wall -Wextra"
   else
     CFLAGS="-g"
   fi
 else
   if test "$GCC" = yes; then
-    CFLAGS="-O2"
+    CFLAGS="-Os -W -Wall -Wextra"
   else
     CFLAGS=
   fi
@@ -1562,7 +1562,7 @@ if test x$enableval = xyes ; then
 #define HAVE_SSL 1
 EOF
 
-	LIBS="$LIBS -lgnutls-openssl"
+	LIBS="$LIBS -lssl -lcrypto"
 fi
 enableval=""
 

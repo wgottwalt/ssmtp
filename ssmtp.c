@@ -26,7 +26,9 @@
 #include <ctype.h>
 #include <netdb.h>
 #ifdef HAVE_SSL
-#include <gnutls/openssl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #endif
 #ifdef MD5AUTH
 #include "md5auth/hmac_md5.h"
@@ -1201,20 +1203,19 @@ int smtp_open(char *host, int port)
 	char buf[(BUF_SZ + 1)];
 
 	/* Init SSL stuff */
-	SSL_CTX *ctx;
-	SSL_METHOD *meth;
-	X509 *server_cert;
-
 	SSL_load_error_strings();
 	SSLeay_add_ssl_algorithms();
-	meth=SSLv23_client_method();
-	ctx = SSL_CTX_new(meth);
+
+	const SSL_METHOD *meth = SSLv23_client_method();
+	SSL_CTX *ctx = SSL_CTX_new(meth);
+	X509 *server_cert;
+
 	if(!ctx) {
 		log_event(LOG_ERR, "No SSL support initiated\n");
 		return(-1);
 	}
 
-	if(use_cert == True) { 
+	if(use_cert == True) {
 		if(SSL_CTX_use_certificate_file(ctx, tls_cert, SSL_FILETYPE_PEM) <= 0) {
 			perror("Use certfile");
 			return(-1);
@@ -1283,7 +1284,7 @@ int smtp_open(char *host, int port)
 		return(-1);
 	}
 
-	if(hent->h_length > sizeof(hent->h_addr)) {
+	if((size_t)hent->h_length > sizeof(hent->h_addr)) {
 		log_event(LOG_ERR, "Buffer overflow in gethostbyname()");
 		return(-1);
 	}
