@@ -1,3 +1,14 @@
+This is basically a fork of sSMTP, which was kind of given up around 2009 and
+then somewhat maintained by Debian. So I took it and started to clean it up
+after seeing all these warnings it was throwing after using a modern compiler
+(read GCC 10 here).
+
+So if some of the former authors are not happy with that, just contact me,
+this wasn't meant to be a rude action. I just don't like to wait, especially
+if I got some free time to spend to do something useful.
+
+---
+
 Purpose and value:
  This is sSMTP, a program that replaces sendmail on workstations that should
  send their mail via the departmental mailhub from which they pick up their
@@ -23,7 +34,7 @@ Type of systems supported:
  (otherwise the day of the month would always be the letter "d").
 
 Dependencies:
- External: Berkeley sockets and supporting libraries.
+ External: Berkeley sockets and supporting libraries like OpenSSL.
 
 Known limitations:
  This is not a complete sendmail. It is only a program to post mail to a
@@ -37,6 +48,8 @@ Known problems:
  as smtpserver in pine.conf. If the mailhub is not reachable, sSMTP will fail.
 
 Authors:
+ Wilken 'Akiko' Gottwalt, akiko@linux-addicted.net
+ Anibal Monsalve Salazar, anibal@debian.org
  David Collier-Brown, davecb@hobbes.ss.org, davecb@sni.ca or dave@lethe.uucp
  Christoph Lameter, clameter@debian.org, clameter@waterf.org, clameter@i-m-f.org
  Hugo Haas, hugo@debian.org, hugo@larve.net, hugo@via.ecp.fr
@@ -48,7 +61,8 @@ IPv6 support from Jun-ya Kato <kato@goto.info.waseda.ac.jp>
 MD5 authentication support from TAKIZAWA Takashi <aki@luna.email.ne.jp>
 
 Current Maintainer:
- Anibal Monsalve Salazar, A.Monsalve.Salazar@IEEE.org
+ Wilken 'Akiko' Gottwalt @ Github, https://github.com/wgottwalt, akiko@linux-addicted.net
+ Anibal Monsalve Salazar @ Debian, A.Monsalve.Salazar@IEEE.org
 
 Patchlevel:
  See ssmtp.c
