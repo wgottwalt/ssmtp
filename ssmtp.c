@@ -671,15 +671,15 @@ void rcpt_parse(char *str)
 int crammd5(char *challengeb64, char *username, char *password, char *responseb64)
 {
 	int i;
-	unsigned char digest[MD5_DIGEST_LEN];
-	unsigned char digascii[MD5_DIGEST_LEN * 2];
-	unsigned char challenge[(BUF_SZ + 1)];
-	unsigned char response[(BUF_SZ + 1)];
-	unsigned char secret[(MD5_BLOCK_LEN + 1)]; 
+	char digest[MD5_DIGEST_LEN];
+	char digascii[MD5_DIGEST_LEN * 2 + 1];
+	char challenge[(BUF_SZ + 1)];
+	char response[(BUF_SZ + 1)];
+	char secret[(MD5_BLOCK_LEN + 1)];
 
 	memset (secret,0,sizeof(secret));
 	memset (challenge,0,sizeof(challenge));
-	strncpy (secret, password, sizeof(secret));	
+	strncpy (secret, password, sizeof(secret));
 	if (!challengeb64 || strlen(challengeb64) > sizeof(challenge) * 3 / 4)
 		return 0;
 	from64tobits(challenge, challengeb64);
@@ -694,7 +694,7 @@ int crammd5(char *challengeb64, char *username, char *password, char *responseb6
 
 	if (sizeof(response) <= strlen(username) + sizeof(digascii))
 		return 0;
-	
+
 	strncpy (response, username, sizeof(response) - sizeof(digascii) - 2);
 	strcat (response, " ");
 	strcat (response, digascii);

@@ -2,8 +2,7 @@
 #define _HMAC_MD5_H
 /* prototypes */
 
-void hmac_md5( unsigned char* text, int text_len, unsigned char* key, 
-		int key_len, unsigned char* digest);
+void hmac_md5(char *text, int text_len, char *key, int key_len, char *digest);
 
 /* pointer to data stream */
 /* length of data stream */
@@ -15,4 +14,3 @@ void hmac_md5( unsigned char* text, int text_len, unsigned char* key,
 #define MD5_DIGEST_LEN 16
 
 #endif
-
